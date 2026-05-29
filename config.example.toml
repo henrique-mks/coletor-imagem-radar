@@ -1,0 +1,32 @@
+# Configuração do sincronizador GOES-19 (NODD → Qualle S3).
+# Copie para `config.toml` e ajuste. Credenciais do destino vêm do AMBIENTE
+# (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY), nunca deste arquivo.
+
+[source]
+# Bucket público do NOAA NODD. Leitura anônima (sem assinatura).
+bucket = "noaa-goes19"
+region = "us-east-1"
+
+[destination]
+# Espelho. Funciona tanto em AWS S3 quanto em MinIO/S3-compatível.
+bucket = "qualle-goes19"
+region = "us-east-1"
+# Prefixo-raiz das chaves no destino (layout normalizado do plano).
+prefix = "goes19"
+
+# --- Para MinIO local, descomente: ---
+# endpoint = "http://localhost:9000"
+# allow_http = true
+
+# --- Produtos (Fase 2+). No esqueleto podem ficar vazios. ---
+
+[[products]]
+name = "abi-l2-cmipf-c13"   # ch13: temp. de topo de nuvem (chuva)
+source_prefix = "ABI-L2-CMIPF"
+channel = "C13"
+poll_interval_secs = 120     # full disk ~10 min
+
+[[products]]
+name = "glm-l2-lcfa"         # raios (Flash) — ~3 arquivos/min
+source_prefix = "GLM-L2-LCFA"
+poll_interval_secs = 60

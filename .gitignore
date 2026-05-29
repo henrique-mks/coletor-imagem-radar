@@ -1,0 +1,8 @@
+/target
+# Config real (pode conter endpoints/buckets específicos); credenciais nunca aqui.
+/config.toml
+# Symlinks/arquivos de apoio à exploração (ex.: PoC Rust+GDAL existente).
+/temp
+# Disco efêmero do pipeline e destino local de teste.
+/data
+/out-s3

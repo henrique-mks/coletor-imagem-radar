@@ -1,0 +1,39 @@
+# NOAA Enhanced IR (oficial NWS/NESDIS) — realce "BD/Enhanced" do C13.
+# Portado FIEL da LUT do PoC goes-nodd-poc (src/colormap.rs::noaa_enhanced),
+# com surface_alpha = 0 (filter_surface=true): superfície quente TRANSPARENTE
+# para uso como overlay; topos frios realçados. Interpolação linear do gdaldem.
+# Formato gdaldem color-relief:  Temp(°C)  R    G    B    Alpha
+nv     0    0    0    0
+# Superfície quente (terra/oceano) — transparente no overlay
+100    0    0    0    0
+10     0    0    0    0
+0      50   50   50   0
+# Rampa de cinza (nuvem média → topo)
+-10    80   80   80   150
+-20    110  110  110  200
+-30    140  140  140  230
+-31    150  150  150  255
+# Transição branco
+-32    180  180  180  255
+-33    210  210  210  255
+-40    240  240  240  255
+# Curva BD (Enhanced) — cores vibrantes a partir de -42 °C
+-42    5    160  235  255
+-44    5    130  235  255
+-46    5    100  235  255
+-48    0    70   235  255
+-50    0    50   200  255
+-52    0    180  0    255
+-54    0    220  0    255
+-56    255  255  0    255
+-58    255  200  0    255
+-60    255  150  0    255
+-62    255  100  0    255
+-64    255  0    0    255
+-66    180  0    0    255
+-68    100  0    0    255
+-70    255  0    255  255
+-72    180  0    180  255
+-74    100  0    100  255
+-76    75   0    75   255
+-80    0    0    0    255
