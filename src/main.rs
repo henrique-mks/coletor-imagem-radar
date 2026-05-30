@@ -1,7 +1,7 @@
-//! Sincronizador GOES-19 — NODD → Qualle S3.
+//! Coletor de Imagem de Radar — GOES-19 (NODD → PMTiles no nosso S3).
 //!
-//! Fase 1 (esqueleto): config + clients S3 (origem anônima, destino com
-//! credenciais) + logging estruturado. O loop de polling/cópia chega na Fase 2.
+//! CLI: `check` (valida config + lista a origem) e `run` (loop de ingest:
+//! poll → download → processa → upload PMTiles → delete-on-success).
 
 mod config;
 mod logging;
@@ -22,7 +22,7 @@ use tracing::{info, warn};
 use crate::config::Config;
 
 #[derive(Parser)]
-#[command(name = "sync-goes19", version, about = "Espelho NODD → Qualle S3 (GOES-19)")]
+#[command(name = "coletor-imagem-radar", version, about = "Coletor de Imagem de Radar — GOES-19 (NODD → PMTiles)")]
 struct Cli {
     /// Caminho do arquivo de configuração TOML.
     #[arg(short, long, default_value = "config.toml", global = true)]

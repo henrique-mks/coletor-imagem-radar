@@ -1,8 +1,8 @@
 //! Construção dos clients S3 via `object_store`.
 //!
 //! - **Origem** (NODD): anônima, `skip_signature(true)`. Sem credenciais.
-//! - **Destino** (espelho): credenciais do ambiente (`AWS_*`), com `endpoint`
-//!   override opcional para MinIO/S3-compatível.
+//! - **Destino**: AWS S3 com credenciais do ambiente (`AWS_*`), ou filesystem
+//!   local (`local_path`) para dev/teste.
 
 use std::sync::Arc;
 
@@ -29,7 +29,7 @@ pub fn build_source(cfg: &SourceConfig) -> Result<Arc<dyn ObjectStore>> {
 ///
 /// Credenciais vêm do ambiente (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
 /// opcional `AWS_SESSION_TOKEN`) via [`AmazonS3Builder::from_env`]. A config
-/// (bucket/região/endpoint) sobrescreve o que vier do ambiente.
+/// (bucket/região) sobrescreve o que vier do ambiente.
 pub fn build_destination(cfg: &DestinationConfig) -> Result<Arc<dyn ObjectStore>> {
     // Destino local (dev/teste): grava no filesystem sob `local_path`.
     if let Some(path) = &cfg.local_path {
@@ -40,20 +40,9 @@ pub fn build_destination(cfg: &DestinationConfig) -> Result<Arc<dyn ObjectStore>
         return Ok(Arc::new(store));
     }
 
-    let mut builder = AmazonS3Builder::from_env()
+    let store = AmazonS3Builder::from_env()
         .with_bucket_name(&cfg.bucket)
-        .with_region(&cfg.region);
-
-    if let Some(endpoint) = &cfg.endpoint {
-        if !endpoint.is_empty() {
-            builder = builder.with_endpoint(endpoint).with_virtual_hosted_style_request(false);
-        }
-    }
-    if cfg.allow_http {
-        builder = builder.with_allow_http(true);
-    }
-
-    let store = builder
+        .with_region(&cfg.region)
         .build()
         .with_context(|| format!("construindo client de destino para '{}'", cfg.bucket))?;
     Ok(Arc::new(store))

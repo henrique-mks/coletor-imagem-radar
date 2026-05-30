@@ -1,5 +1,5 @@
-# Configuração do sincronizador GOES-19 (NODD → Qualle S3).
-# Copie para `config.toml` e ajuste. Credenciais do destino vêm do AMBIENTE
+# Configuração do Coletor de Imagem de Radar — GOES-19 (NODD → nosso S3).
+# Copie para `config.toml` e ajuste. Credenciais do destino (S3) vêm do AMBIENTE
 # (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY), nunca deste arquivo.
 
 [source]
@@ -8,15 +8,13 @@ bucket = "noaa-goes19"
 region = "us-east-1"
 
 [destination]
-# Espelho. Funciona tanto em AWS S3 quanto em MinIO/S3-compatível.
+# Nosso S3 (AWS). Destino dos PMTiles.
 bucket = "qualle-goes19"
 region = "us-east-1"
 # Prefixo-raiz das chaves no destino (layout normalizado do plano).
 prefix = "goes19"
-
-# --- Para MinIO local, descomente: ---
-# endpoint = "http://localhost:9000"
-# allow_http = true
+# Dev/teste: grava no filesystem local em vez do S3 (descomente).
+# local_path = "./out-s3"
 
 # --- Produtos (Fase 2+). No esqueleto podem ficar vazios. ---
 

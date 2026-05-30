@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## O que é
 
-`sync-goes19` é um binário Rust (tokio) que espelha produtos GOES-19 do **NOAA
+`coletor-imagem-radar` é um binário Rust (tokio) que coleta produtos GOES-19 do **NOAA
 NODD** (bucket público `noaa-goes19`, `us-east-1`, leitura anônima) para um S3
-nosso (AWS, MinIO ou filesystem local) e, no caminho, **processa** cada frame
+nosso (AWS ou filesystem local) e, no caminho, **processa** cada frame
 ABI C13 (NetCDF) em **PMTiles** prontos para mapa. Comentários e docs em pt-BR.
 
 ## Comandos
@@ -23,7 +23,7 @@ cargo test source_hour_prefix       # roda um teste específico por nome
 - Config: `-c/--config` (default `config.toml`). Copie `config.example.toml`.
 - Credenciais do destino vêm SÓ do ambiente: `AWS_ACCESS_KEY_ID`,
   `AWS_SECRET_ACCESS_KEY` (`AWS_SESSION_TOKEN` opcional). Nunca no TOML.
-- Logs: `RUST_LOG=sync_goes19=debug` para verbosidade; `SYNC_LOG_FORMAT=json`
+- Logs: `RUST_LOG=coletor_imagem_radar=debug` para verbosidade; `SYNC_LOG_FORMAT=json`
   para saída JSON.
 
 ## Dependências externas (não-Rust)
@@ -63,7 +63,7 @@ Módulos:
 |----------------|-------|
 | `main.rs`      | CLI clap (`check`, `run`); subcomando `check` faz o smoke-test de list. |
 | `config.rs`    | Structs serde do TOML + `Config::load`/`validate`. `deny_unknown_fields`. |
-| `storage.rs`   | Constrói clients `object_store`: origem anônima (`skip_signature`), destino S3/MinIO (`from_env` + `endpoint`/`allow_http`) ou `LocalFileSystem` quando `destination.local_path` está setado. |
+| `storage.rs`   | Constrói clients `object_store`: origem anônima (`skip_signature`), destino AWS S3 (`from_env`) ou `LocalFileSystem` quando `destination.local_path` está setado. |
 | `nodd.rs`      | Convenções de chave NODD (prefixo da hora, chave de destino). Tem os testes. |
 | `pipeline.rs`  | Loop poll→processa por produto; dedupe em memória. |
 | `process.rs`   | Cadeia GDAL→PMTiles do C13; constantes de calibração/BBOX/resolução. |

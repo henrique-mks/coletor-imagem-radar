@@ -55,22 +55,15 @@ pub struct SourceConfig {
     pub region: String,
 }
 
-/// Bucket de destino (espelho). AWS S3 real ou MinIO/S3-compatível via `endpoint`.
+/// Bucket de destino: AWS S3 (ou filesystem local via `local_path`, dev/teste).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DestinationConfig {
     pub bucket: String,
     #[serde(default = "default_region")]
     pub region: String,
-    /// Endpoint customizado para MinIO ou S3-compatível.
-    /// `None`/ausente = AWS S3 real. Ex. MinIO: `http://localhost:9000`.
-    #[serde(default)]
-    pub endpoint: Option<String>,
-    /// Permite HTTP (sem TLS) — necessário para MinIO local. Ignorado em AWS.
-    #[serde(default)]
-    pub allow_http: bool,
     /// Se definido, grava no **filesystem local** sob este caminho (dev/teste),
-    /// ignorando S3/`endpoint`. O `prefix` ainda é aplicado às chaves.
+    /// ignorando o S3. O `prefix` ainda é aplicado às chaves.
     #[serde(default)]
     pub local_path: Option<String>,
     /// Prefixo-raiz das chaves no destino. Ex.: `goes19`.

@@ -1,8 +1,14 @@
-# sync-goes19
+# Coletor de Imagem de Radar
 
-Espelho idempotente dos produtos GOES-19 do **NOAA NODD** (`noaa-goes19`, S3 público,
-`us-east-1`, leitura anônima) para um **S3 nosso** (AWS S3 ou MinIO). Projeto separado da
-`qualle-control-api`; primeiro bloco do produto GOES-19. Stack: **Rust + tokio + `object_store`**.
+> Crate/binário: `coletor-imagem-radar`.
+
+Pipeline em Rust que **ingere** produtos GOES-19 do **NOAA NODD** (`noaa-goes19`, S3 público,
+`us-east-1`, leitura anônima), **processa** cada frame ABI C13 (NetCDF) em **PMTiles** prontos para
+mapa e os entrega no **nosso S3** (AWS). O bruto (`.nc`) é **efêmero**: baixado para disco, processado
+e **descartado após o upload** — não há espelho persistente.
+
+Projeto separado da `qualle-control-api`; primeiro bloco do produto GOES-19.
+Stack: **Rust + tokio + `object_store` + GDAL**.
 
 > Plano completo no Obsidian: `Projetos/Sincronizador GOES-19 NODD/Plano`.
 
@@ -22,7 +28,7 @@ containerização). Plano completo no Obsidian: `Projetos/Sincronizador GOES-19 
 ## Uso
 
 ```sh
-cp config.example.toml config.toml   # ajuste buckets/endpoint
+cp config.example.toml config.toml   # ajuste buckets/prefixo
 cargo run -- check                   # valida config + lista a origem (dry-run)
 ```
 
@@ -33,7 +39,7 @@ export AWS_ACCESS_KEY_ID=...
 export AWS_SECRET_ACCESS_KEY=...
 ```
 
-Logging: `RUST_LOG=sync_goes19=debug` para verbosidade; `SYNC_LOG_FORMAT=json` para JSON.
+Logging: `RUST_LOG=coletor_imagem_radar=debug` para verbosidade; `SYNC_LOG_FORMAT=json` para JSON.
 
 ## Layout
 
