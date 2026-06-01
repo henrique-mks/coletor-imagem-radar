@@ -1,0 +1,11 @@
+target/
+data/
+out-s3/
+temp/
+.git/
+config.toml
+aws.env
+*.env
+Containerfile
+compose.yaml
+.dockerignore

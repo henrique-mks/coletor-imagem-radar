@@ -1,0 +1,27 @@
+# Coletor de Imagem de Radar (GOES-19 → PMTiles).
+#
+# A imagem é multi-stage (ver Containerfile): compila o binário Rust em musl e
+# roda sobre osgeo/gdal:alpine-normal. Build via: podman compose build.
+#
+# Credenciais:
+#   - S3 do destino: dotenv aws.env (AWS_ACCESS_KEY_ID/SECRET) — gitignored.
+#   - Postgres do catálogo: na seção [database] do config.toml (montado abaixo).
+services:
+  coletor:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: coletor-imagem-radar:latest
+    # config.toml fica fora da imagem (gitignored). Montado read-only no cwd.
+    volumes:
+      - ./config.toml:/app/config.toml:ro
+    # Creds AWS do destino S3. aws.env é dotenv puro (KEY=value, sem 'export').
+    env_file:
+      - aws.env
+    environment:
+      RUST_LOG: ${RUST_LOG:-coletor_imagem_radar=info}
+      SYNC_LOG_FORMAT: ${SYNC_LOG_FORMAT:-}
+    restart: unless-stopped
+    # Default: loop contínuo (CMD ["run"]). Para um one-shot, rode:
+    #   podman compose run --rm coletor run --once --limit 1
+    #   podman compose run --rm coletor migrate
