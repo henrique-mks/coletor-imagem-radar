@@ -17,6 +17,7 @@ cargo run -- migrate                # aplica as migrations do catálogo (schema 
 cargo run -- check --limit 5        # valida config + lista a origem (dry-run, sem escrever)
 cargo run -- run --once --limit 1   # uma passada do pipeline (download→processa→upload→catálogo→delete)
 cargo run -- run                    # loop contínuo (poll por produto)
+cargo run -- backfill --hours 48    # popula retroativo: varre as últimas N horas (default 48) numa passada
 cargo test                          # testes (src/nodd.rs: chaves + parser de timestamp)
 cargo test source_hour_prefix       # roda um teste específico por nome
 ```

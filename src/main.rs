@@ -52,6 +52,16 @@ enum Command {
         #[arg(long, default_value_t = 0)]
         limit: usize,
     },
+    /// Backfill: processa as últimas N horas de uma vez (popula catálogo/S3
+    /// retroativamente). O dedupe evita reprocessar o que já existe.
+    Backfill {
+        /// Quantas horas para trás cobrir.
+        #[arg(long, default_value_t = 48)]
+        hours: i64,
+        /// Máximo de objetos processados por produto (0 = sem limite).
+        #[arg(long, default_value_t = 0)]
+        limit: usize,
+    },
     /// Aplica as migrations do catálogo no Postgres (schema `imagens_satelite`).
     Migrate,
 }
@@ -72,6 +82,7 @@ async fn main() -> Result<()> {
     match cli.command {
         Command::Check { limit } => check(&config, limit).await,
         Command::Run { once, limit } => pipeline::run(&config, once, limit).await,
+        Command::Backfill { hours, limit } => pipeline::backfill(&config, hours, limit).await,
         Command::Migrate => {
             let db = config
                 .database

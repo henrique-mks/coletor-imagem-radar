@@ -28,9 +28,18 @@ use crate::{nodd, storage};
 /// entrar uma 2ª origem (ex.: EUMETSAT) na Fase 4+.
 const FONTE: &str = "noaa-goes-19";
 
-/// Roda o pipeline. `once = true` faz uma única passada e sai (para testes).
-/// `limit = 0` processa todos os objetos novos por poll; >0 limita.
-pub async fn run(config: &Config, once: bool, limit: usize) -> Result<()> {
+/// Setup compartilhado por [`run`] e [`backfill`]: clients de origem/destino,
+/// dir de trabalho efêmero, rampa de cor e estado persistente (catálogo
+/// Postgres + cache redb).
+async fn open_pipeline(
+    config: &Config,
+) -> Result<(
+    Arc<dyn ObjectStore>,
+    Arc<dyn ObjectStore>,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    State,
+)> {
     let source = storage::build_source(&config.source)?;
     let dest = storage::build_destination(&config.destination)?;
 
@@ -38,24 +47,33 @@ pub async fn run(config: &Config, once: bool, limit: usize) -> Result<()> {
     tokio::fs::create_dir_all(&work_dir).await?;
     let ramp = Path::new(&config.pipeline.c13_color_ramp).to_path_buf();
 
-    if config.products.is_empty() {
-        warn!("nenhum produto configurado — nada a processar");
-        return Ok(());
-    }
-
     // Estado persistente (Fase 3): catálogo Postgres + cache redb.
     let db_cfg = config
         .database
         .as_ref()
-        .context("`run` exige a seção [database] na config (catálogo, Fase 3)")?;
+        .context("exige a seção [database] na config (catálogo, Fase 3)")?;
     let state = State::open(db_cfg, Path::new(&config.pipeline.state_path)).await?;
+
+    Ok((source, dest, work_dir, ramp, state))
+}
+
+/// Roda o pipeline. `once = true` faz uma única passada e sai (para testes).
+/// `limit = 0` processa todos os objetos novos por poll; >0 limita.
+pub async fn run(config: &Config, once: bool, limit: usize) -> Result<()> {
+    if config.products.is_empty() {
+        warn!("nenhum produto configurado — nada a processar");
+        return Ok(());
+    }
+    let (source, dest, work_dir, ramp, state) = open_pipeline(config).await?;
 
     loop {
         let now = OffsetDateTime::now_utc();
         for product in &config.products {
-            if let Err(e) =
-                poll_product(&source, &dest, config, product, &work_dir, &ramp, limit, &state, now)
-                    .await
+            // `1` = janela de overlap: hora corrente + a anterior (chegadas tardias).
+            if let Err(e) = poll_product(
+                &source, &dest, config, product, &work_dir, &ramp, limit, &state, now, 1,
+            )
+            .await
             {
                 error!(product = %product.name, error = %format!("{e:#}"), "falha no poll");
             }
@@ -78,7 +96,35 @@ pub async fn run(config: &Config, once: bool, limit: usize) -> Result<()> {
     Ok(())
 }
 
-/// Lista a hora corrente **e a anterior** do produto e processa o que for novo.
+/// Backfill: numa única passada, varre as últimas `hours` horas inteiras (em vez
+/// de só a janela de overlap do [`run`]), para popular catálogo/S3
+/// retroativamente. O dedupe persistente evita reprocessar o que já existe.
+/// `limit = 0` processa tudo que for novo na janela; >0 limita por produto.
+pub async fn backfill(config: &Config, hours: i64, limit: usize) -> Result<()> {
+    if config.products.is_empty() {
+        warn!("nenhum produto configurado — nada a processar");
+        return Ok(());
+    }
+    let (source, dest, work_dir, ramp, state) = open_pipeline(config).await?;
+
+    let now = OffsetDateTime::now_utc();
+    info!(hours, "backfill iniciando (últimas N horas)");
+    for product in &config.products {
+        if let Err(e) = poll_product(
+            &source, &dest, config, product, &work_dir, &ramp, limit, &state, now, hours,
+        )
+        .await
+        {
+            error!(product = %product.name, error = %format!("{e:#}"), "falha no backfill");
+        }
+    }
+    info!("backfill concluído");
+    Ok(())
+}
+
+/// Lista a hora corrente e as `hours_back` anteriores do produto e processa o
+/// que for novo. `hours_back = 1` é a janela de overlap do [`run`]; valores
+/// maiores fazem backfill.
 #[allow(clippy::too_many_arguments)]
 async fn poll_product(
     source: &Arc<dyn ObjectStore>,
@@ -90,15 +136,16 @@ async fn poll_product(
     limit: usize,
     state: &State,
     now: OffsetDateTime,
+    hours_back: i64,
 ) -> Result<()> {
     // Filtro de canal: nome traz "<canal>_G19" (ex.: M6C13_G19). Sem canal = sem filtro.
     let needle = product.channel.as_ref().map(|c| format!("{c}_G19"));
 
-    // Janela de overlap: hora corrente + anterior (chegadas tardias do NODD).
-    let prefixes = [
-        nodd::source_hour_prefix(product, now),
-        nodd::source_hour_prefix(product, now - Duration::hours(1)),
-    ];
+    // Hora corrente + as `hours_back` anteriores. source_hour_prefix recomputa
+    // AAAA/DDD/HH a cada hora, então cruzar meia-noite/virada de ano sai de graça.
+    let prefixes: Vec<String> = (0..=hours_back)
+        .map(|h| nodd::source_hour_prefix(product, now - Duration::hours(h)))
+        .collect();
 
     let mut keys: Vec<String> = Vec::new();
     let mut seen_this_poll: HashSet<String> = HashSet::new();
